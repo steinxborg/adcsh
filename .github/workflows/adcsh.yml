@@ -1,0 +1,39 @@
+name: Update Adcash Library
+
+on:
+  schedule:
+    # Run every 6 hours to get latest updates
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  update-library:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Fetch Adcash library
+        run: |
+          curl -f -o adcsh.js "https://adbpage.com/adblock?v=3&format=js"
+          
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git diff --quiet adcsh.js || echo "changed=true" >> $GITHUB_OUTPUT
+      
+      - name: Commit and push if changed
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add adcsh.js
+          git commit -m "Update Adcash library - $(date +'%Y-%m-%d %H:%M:%S')"
+          git push
+      
+      - name: No changes detected
+        if: steps.check_changes.outputs.changed != 'true'
+        run: echo "No changes in Adcash library"
